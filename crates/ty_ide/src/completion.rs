@@ -1443,6 +1443,7 @@ impl ModuleDependencyKind {
         if sp.is_standard_library() {
             if module.is_known(db, KnownModule::Typing)
                 || module.is_known(db, KnownModule::Collections)
+                || module.is_known(db, KnownModule::CollectionsAbc)
             {
                 ModuleDependencyKind::StdlibSpecial
             } else {
@@ -8879,6 +8880,23 @@ from collections import ChainMap as ChainMap
         assert_snapshot!(builder.build().snapshot(), @"
         ChainMap :: collections
         ChainMap :: thirdparty
+        ");
+    }
+
+    #[test]
+    fn auto_import_prefers_collections_abc_over_typing() {
+        let builder = completion_test_builder("Itera<CURSOR>")
+            .module_names()
+            .filter(|c| {
+                c.name == "Iterator"
+                    && matches!(
+                        c.module_name.map(ModuleName::as_str),
+                        Some("collections.abc" | "typing")
+                    )
+            });
+        assert_snapshot!(builder.build().snapshot(), @"
+        Iterator :: collections.abc
+        Iterator :: typing
         ");
     }
 
